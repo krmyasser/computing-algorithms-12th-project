@@ -1,0 +1,129 @@
+import networkx as nx
+import matplotlib.pyplot as plt
+import heapq
+from collections import defaultdict
+
+def visualize_graph(G, title="Graph", highlighted_edges=None, node_colors=None):
+    """Visualizes the graph with highlighted edges and node colors."""
+    pos = nx.spring_layout(G)
+    edge_colors = ['red' if e in highlighted_edges else 'black' for e in G.edges()]
+    node_default = ['lightblue' for _ in G.nodes()]
+    node_colors = node_colors if node_colors else node_default
+    
+    nx.draw(G, pos, with_labels=True, node_color=node_colors, edge_color=edge_colors, width=2)
+    edge_labels = nx.get_edge_attributes(G, 'weight')
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+    plt.title(title)
+    plt.show()
+
+def dijkstra_visualization(G, start_node):
+    """Visualizes Dijkstra's algorithm step-by-step."""
+    distances = {node: float('infinity') for node in G.nodes()}
+    distances[start_node] = 0
+    priority_queue = [(0, start_node)]
+    visited = set()
+    steps = 0
+    
+    while priority_queue:
+        current_distance, current_node = heapq.heappop(priority_queue)
+        
+        if current_node in visited:
+            continue
+        visited.add(current_node)
+        
+        node_colors = [
+            'red' if node == current_node 
+            else 'lightgreen' if node in visited 
+            else 'lightblue' 
+            for node in G.nodes()
+        ]
+        
+        active_edges = [(current_node, neighbor) for neighbor in G.neighbors(current_node)]
+        visualize_graph(G, f"Dijkstra Step {steps}: Current Node = {current_node}", active_edges, node_colors)
+        steps += 1
+        
+        for neighbor in G.neighbors(current_node):
+            weight = G[current_node][neighbor]['weight']
+            distance = current_distance + weight
+            
+            if distance < distances[neighbor]:
+                distances[neighbor] = distance
+                heapq.heappush(priority_queue, (distance, neighbor))
+    
+    print("\nFinal Distances:", distances)
+
+def kruskal_visualization(G):
+    """Visualizes Kruskal's algorithm step-by-step."""
+    edges = sorted(G.edges(data=True), key=lambda x: x[2]['weight'])
+    parent = {node: node for node in G.nodes()}
+    mst_edges = []
+    steps = 0
+    
+    def find(node):
+        while parent[node] != node:
+            node = parent[node]
+        return node
+    
+    for u, v, data in edges:
+        root_u = find(u)
+        root_v = find(v)
+        
+        if root_u != root_v:
+            mst_edges.append((u, v))
+            parent[root_v] = root_u
+            visualize_graph(G, f"Kruskal Step {steps}: Added Edge ({u}, {v})", mst_edges)
+            steps += 1
+    
+    print("\nMST Edges:", mst_edges)
+
+def get_user_input():
+    """Handles user input with fallback to a default graph."""
+    print("\n=== Graph Algorithm Visualizer ===")
+    print("Choose input method:")
+    print("1. Enter graph manually")
+    print("2. Use default example graph (A-B-4, B-C-2, C-D-3, A-D-1)")
+    choice = input("Choose (1 or 2): ").strip()
+    
+    G = nx.Graph()
+    
+    if choice == "1":
+        nodes = input("Enter nodes (comma-separated, e.g., A,B,C,D): ").strip().split(',')
+        edges_input = input("Enter edges (format: A-B-2,B-C-3,...): ").strip().split(',')
+        G.add_nodes_from(nodes)
+        for edge in edges_input:
+            try:
+                u, v, w = edge.split('-')
+                G.add_edge(u.strip(), v.strip(), weight=int(w))
+            except:
+                print(f"Invalid edge: {edge}. Skipping.")
+    else:
+        # Default graph
+        G.add_edge('A', 'B', weight=4)
+        G.add_edge('B', 'C', weight=2)
+        G.add_edge('C', 'D', weight=3)
+        G.add_edge('A', 'D', weight=1)
+        print("Using default graph.")
+    
+    return G
+
+def main():
+    G = get_user_input()
+    
+    print("\nAlgorithms:")
+    print("1. Dijkstra's Shortest Path")
+    print("2. Kruskal's Minimum Spanning Tree")
+    choice = input("Choose algorithm (1 or 2): ").strip()
+    
+    if choice == "1":
+        start_node = input("Enter start node: ").strip()
+        if start_node not in G.nodes():
+            print(f"Error: {start_node} not in graph. Using first node.")
+            start_node = list(G.nodes())[0]
+        dijkstra_visualization(G, start_node)
+    elif choice == "2":
+        kruskal_visualization(G)
+    else:
+        print("Invalid choice!")
+
+if __name__ == "__main__":
+    main()
